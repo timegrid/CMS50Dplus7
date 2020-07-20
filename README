@@ -1,48 +1,124 @@
-Contec CMS50D+ Pulse Oximeter Data Downloader
-=============================================
+Contec CMS50D+ Pulse Oximeter v7.0 Data Interface
+=================================================
 
-This python script can download both live data and recorded data from a Contec 
-CMS50D+ pulse oximeter into a standard CSV file for further analysis.
+This python script contains a GUI and CLI to access realtime and storage data
+from a Contec CMS50D+ pulse oximeter (Communication Protocol v7.0).
 
-In live data mode the device will sample at 60 Hz. Each sample is saved to CSV 
-along with the current wallclock time (in UTC). For recorded data you'll have
-to provide a start time as the device doesn't provide any historic timestamps
-at all. In this mode we assume a sample rate of 1 Hz.
+Features
+--------
 
-For more details, see my blog post at http://www.atbrask.dk/?p=244
+CLI
+- Print realtime data
+- Dump realtime/storage data (CSV)
 
-History
--------
-1.0 (2015-03-24) Uploaded initial version to GitHub
-1.1 (2015-03-26) Added support for downloading recorded data
-1.2 (2015-09-28) Added time column to output CSV for both modes
+GUI
+- Interactive plots of realtime/storage data
+- Save plots (Image)
+- Save/Load data (CSV)
+
+Requirements
+------------
+
+- python (>=3.8)
+- python modules
+    - python-dateutil (>=2.8.1)
+    - pyserial (>=3.4)
+    - matplotlib (>=3.3.0)
+
+Installation
+------------
+
+For virtualenv:
+
+    $git clone https://github.com/timegrid/CMS50Dplus7.git
+    $cd CMS50Dplus7
+    $python -m venv env
+    $source env/bin/activate
+    $pip install -r requirements.txt
 
 Syntax
 ------
-usage: cms50dplus.py [-h] [-s STARTTIME] {LIVE,RECORDED} serialport output
 
-cms50dplus.py v1.2 - Contec CMS50D+ Data Downloader (c) 2015 atbrask
+usage: cms50dplus7.py [-h] [-c] [-d {realtime,storage}] [-p PORT] [-f FILENAME]
+                      [-s STARTTIME] [-t]
 
-positional arguments:
-  {LIVE,RECORDED}       Specify LIVE for live data or RECORDED for recorded
-                        data.
-  serialport            The device's virtual serial port.
-  output                Output CSV file.
+Contec CMS50D+ v7.0 Data Interface (c) 2020 Alexander Blum, (c) 2015 atbrask
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c, --cli             Use CLI mode.
+  -p PORT, --port PORT  Virtual serial port of the device.
+  -d {realtime,storage}, --datatype {realtime,storage}
+                        Type of data.
+  -f FILENAME, --filename FILENAME
+                        Output CSV file.
   -s STARTTIME, --starttime STARTTIME
-                        The start time for RECORDED mode data.
+                        Start time for storage mode data [any parsable format].
+  -t, --testdata        Use testdata, do not connect to the device.
 
+The default port is /dev/ttyUSB0.
+The default filename for the CLI storage dump is 'storage-<timestamp>.csv'.
+The default starttime for the CLI storage dump is now().
+The starttime may be any format parsable by dateutil.parser.
 
-Example
--------
-If you have the device connected as /dev/ttyUSB0 and want live data saved as
-foo.csv, then the program can be run like this:
+For CLI storage data you'll have to provide a starttime as the device doesn't
+provide any historic timestamps at all.
 
-./cms50dplus.py LIVE /dev/ttyUSB0 foo.csv
+Examples
+--------
 
-Likewise for recorded data:
+Start the GUI:
 
-./cms50dplus.py RECORDED /dev/ttyUSB0 foo.csv -s "2015-01-01 12:34:56"
+    $./cms50dplus7.py
 
+Start the GUI, connect to port initially:
+
+    $./cms50dplus7.py -p /dev/someport
+
+Print realtime data on CLI:
+
+    $./cms50dplus7.py -c
+
+Dump realtime data via CLI by providing a filename:
+
+    $./cms50dplus7.py -c -f 'realtime.csv'
+
+Dump storage data via CLI, connect to port, set starttime:
+
+    $./cms50dplus7.py -c -p '/dev/someport' -d storage -s '01.01.1970 00:00:00'
+
+Samplerate
+----------
+
+In storage mode we assume a sample rate of 1 Hz.
+In realtime data mode the device will sample at 60 Hz.
+
+In the GUI all datapoints are always preserved internally and during save/load,
+although the plotting may use a different samplerate to decrease the CPU load.
+While recording, only those datapoints within the range of the plot are plotted.
+When stopped, the whole timespan is used eventually. If the CPU load feels still
+too high, you might try to set:
+- 'CMS50DplusGui.plot_samplerate' to around 1-10 Hz
+- 'CMS50DplusGui.plot_refreshrate' to around 100-1000 ms.
+
+Tests
+-----
+
+The unittests cover most of the device functions and parsers but not the GUI.
+To run the unittests:
+
+    $./test.py
+
+For manual testing without a device, provide the -t(estdata) flag
+
+    $./cms50dplus7.py -t
+    $./cms50dplus7.py -t -c
+
+The code was written and tested with a Pulox PO-250 device.
+
+Credit
+------
+
+This script is based on the CLI code by atbrask at https://github.com/atbrask/CMS50Dplus
+for the Communication Protocol v5.0 and updated for v7.0 according to 
+https://github.com/InfantLab/Contec-Pulse-Oximeter-in-Matlab/blob/master/Communication%20protocol%20of%20pulse%20oximeter%20V7.0.pdf
